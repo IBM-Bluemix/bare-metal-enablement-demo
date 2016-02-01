@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style type="text/css">
+      html, body { height: 100%; margin: 0; padding: 0; }
+      #map { height: 100%; }
+      #floating-panel {
+          position: absolute;
+          top: 10px;
+          left: 25%;
+          z-index: 5;
+          background-color: #fff;
+          padding: 5px;
+          border: 1px solid #999;
+          text-align: center;
+          font-family: 'Roboto','sans-serif';
+          line-height: 30px;
+          padding-left: 10px;
+      }
+
+      #floating-panel {
+          background-color: #fff;
+          border: 1px solid #999;
+          left: 0%;
+          padding: 5px;
+          position: absolute;
+          top: 91%;
+          z-index: 5;
+      }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap -->
+  <link href="/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script  async defer src="/vendor/jquery-1.9.1.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script  async defer src="/vendor/bootstrap/js/bootstrap.min.js"></script>
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script  async defer src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+  <script  async defer src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div id="floating-panel">
+  <button id="toggleCinemaMarkers">Cinemas</button>
+  <button id="toggleHeatmap">Cab Dropoffs</button>
+  <!--<button id="changeG">Change Gradient</button>-->
+  <!--<button id="changeR">Change radius</button>-->
+  <!--<button id="changeO">Change opacity</button>-->
+</div>
+<div id="map"></div>
+<script type="text/javascript">
+    var map, heatmap;
+    var markers = [];
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            mapTypeId: google.maps.MapTypeId.SATELLITE,
+            center: {lat: 40.735, lng: -73.990},
+            zoom: 13,
+            zoomControl: false,
+            mapTypeControl: false,
+            scaleControl: false,
+            streetViewControl: false,
+            rotateControl: false
+        });
+
+        // Adds a marker to the map and push to the array.
+        function addMarker(location, name) {
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            var contentString = '<h5>' + name + '</h5>';
+            var infowindow = new google.maps.InfoWindow({
+                content: contentString
+            });
+            marker.addListener('click', function() {
+                infowindow.open(map, marker);
+            });
+
+            markers.push(marker);
+        }
+
+        // Sets the map on all markers in the array.
+        function setMapOnAll(map) {
+            for (var i = 0; i < markers.length; i++) {
+                markers[i].setMap(map);
+            }
+        }
+
+        // Removes the markers from the map, but keeps them in the array.
+        function clearMarkers() {
+            setMapOnAll(null);
+        }
+
+        <% cinemas.each do |cinema| %>
+            lat_lng = {lat: <%=cinema['location']['lat'].round(6)%>, lng: <%=cinema['location']['lng'].round(6)%>}
+            addMarker(lat_lng, "<%=cinema['name']%>");
+        <% end %>
+
+        clearMarkers();
+
+        heatmap = new google.maps.visualization.HeatmapLayer({
+            data: getPoints(),
+            map: null,
+            radius: 20
+        });
+
+        function toggleHeatmap() {
+            heatmap.setMap(heatmap.getMap() ? null : map);
+        }
+
+        function changeGradient() {
+            var gradient = [
+                'rgba(0, 255, 255, 0)',
+                'rgba(0, 255, 255, 1)',
+                'rgba(0, 191, 255, 1)',
+                'rgba(0, 127, 255, 1)',
+                'rgba(0, 63, 255, 1)',
+                'rgba(0, 0, 255, 1)',
+                'rgba(0, 0, 223, 1)',
+                'rgba(0, 0, 191, 1)',
+                'rgba(0, 0, 159, 1)',
+                'rgba(0, 0, 127, 1)',
+                'rgba(63, 0, 91, 1)',
+                'rgba(127, 0, 63, 1)',
+                'rgba(191, 0, 31, 1)',
+                'rgba(255, 0, 0, 1)'
+            ]
+            heatmap.set('gradient', heatmap.get('gradient') ? null : gradient);
+        }
+
+        function changeRadius() {
+            heatmap.set('radius', heatmap.get('radius') ? null : 20);
+        }
+
+        function changeOpacity() {
+            heatmap.set('opacity', heatmap.get('opacity') ? null : 0.2);
+        }
+
+        function getPoints() {
+            return [
+                <% dropoffs.each do |dropoff| %>
+                    new google.maps.LatLng(<%=dropoff[:lat]%>, <%=dropoff[:lng]%>),
+                <% end %>
+            ];
+        }
+
+        $(document).ready(function(){
+            cinema_show_state = false;
+            $("#toggleHeatmap").click(function(){
+                toggleHeatmap();
+            });
+            $("#changeG").click(function(){
+                changeGradient();
+            });
+            $("#changeR").click(function(){
+                changeRadius();
+            });
+            $("#changeO").click(function(){
+                changeOpacity();
+            });
+            $("#toggleCinemaMarkers").click(function(){
+                if(cinema_show_state) {
+                    clearMarkers();
+                    cinema_show_state = false;
+                }else{
+                    setMapOnAll(map);
+                    cinema_show_state = true;
+                }
+            });
+        });
+
+    }
+
+</script>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=<%=api_key%>&libraries=visualization&callback=initMap">
+</script>
+</body>
+</html>
