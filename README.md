@@ -17,3 +17,10 @@ Download and run sinatra-bootstrap:
 	
 Then open [http://localhost:4567/](http://localhost:4567/)
 
+Configuration
+===
+
+Update the `manifest.yml` with FourSquare API keys and a Google maps JavaScript API key.
+
+Then just `cf push`
+
